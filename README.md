@@ -1,73 +1,207 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Rock Paper Scissors Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
-
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
 ## Installation
 
-```bash
-$ npm install
-```
-
-## Running the app
+Clone repo:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+ git clone https://github.com/yuferevaleksey/RPS-backend
 ```
-
-## Test
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+ cd RPS-backend
 ```
 
-## Support
+Run docker command:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+ docker-compose up -d
+```
 
-## Stay in touch
+Check that all works: Open http://localhost:3001 in the browser, and you should see **Hello World!** on the white page`
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## How it works.
 
-## License
+Players could add a new game with unlimited counts of rounds or join an existing one.
+After the player creates a new game he will wait till another player will not join his game.
 
-Nest is [MIT licensed](LICENSE).
+For creating a new game client send the following event: **IncomingEvents.START_NEW_GAME**
+For joining an existing game client send Event **IncomingEvents.JOIN_GAME**
+
+After the second player joined a game, the backend noticed that game is ready to be started and will notify clients about that. So the game started!
+
+The players make their choices. The round will not be finished till all players will not make their choices. After the last player makes his choice, the backend will calculate who is win and notify all participants.
+
+For getting a list of available games **IncomingEvents.GET_GAMES_LIST**
+
+Every time the client sends an event, such as **IncomingEvents.START_NEW_GAME** or **IncomingEvents.MAKE_CHOICE**, the backend part
+store/modify data in mongo DB collection and return it as a response and also notify an opponent user about changes.
+
+
+## WS Outgoing Events
+```javascript
+enum OutgoingEvents {
+  GAME_RESPONSE = 'gameResponse',
+  CONNECTED_SUCCESSFULLY = 'connectedSuccessfully',
+  CONNECT = 'connect',
+}
+```
+
+### OutgoingEvents.GAME_RESPONSE
+
+Called for any outgoing event, the server always returns a Game response, so the client needs to listen to only one event: IncomingEvents.GAME_RESPONSE.
+
+```javascript
+{
+  _id: string;
+  roundsCount: number;
+  currentRound: number;
+  players:[{
+    socketId: string;
+    nickName: string;
+    deactivated: string;
+  }];
+  rounds:[
+    roundNumber: number;
+  choices: [
+    userSocket: string;
+  choice: Shapes;
+];
+  winner: string;
+];
+  paused: boolean;
+  finished: boolean;
+  pausedBy: string;
+}
+```
+
+### OutgoingEvents.CONNECTED_SUCCESSFULLY
+Send after a connection was established. Used for saving on client side user's socket ID.
+
+
+## WS incoming Events
+
+```javascript
+enum IncomingEvents {
+  START_NEW_GAME = 'startNewGame',
+  JOIN_GAME = 'joinGame',
+  MAKE_CHOICE = 'makeChoice',
+  GET_GAMES_LIST = 'getGamesList',
+  MOVE_NEXT_ROUND = 'moveNextRound',
+  PAUSE_GAME = 'pauseGame',
+  RESUME_GAME = 'resumeGame',
+  QUIT_GAME = 'quitGame',
+}
+```
+
+### IncomingEvents.START_NEW_GAME
+
+#### Request:
+```javascript
+interface StartNewGameMessage {
+  nickName: string;
+  socketId: string;
+  roundsCount: number;
+}
+```
+
+#### Responce:
+See: *OutgoingEvents.GAME_RESPONSE*
+
+### IncomingEvents.JOIN_GAME
+
+#### Request:
+```javascript
+interface JoinNewGameMessage {
+  gameId: string;
+  nickName: string;
+  socketId: string;
+}
+```
+
+#### Responce:
+See: *OutgoingEvents.GAME_RESPONSE*
+
+
+### IncomingEvents.QUIT_GAME
+
+#### Request:
+```javascript 
+interface ExitGameMessage {
+    gameId: string;
+    socketId: string;
+}
+```
+
+#### Responce:
+See: *OutgoingEvents.GAME_RESPONSE*
+
+### IncomingEvents.MAKE_CHOICE
+
+#### Request:
+```javascript
+interface MakeChoiceMessage {
+  gameId: string;
+  socketId: string;
+  choice: Shapes;
+}
+```
+
+#### Responce:
+See: *OutgoingEvents.GAME_RESPONSE*
+
+### IncomingEvents.GET_GAMES_LIST
+
+#### Request:
+none
+
+#### Response:
+Returns array of GameItem
+```javascript
+interface GameItem {
+  id: string;
+  roundsCount: number;
+}
+```
+
+### IncomingEvents.MOVE_NEXT_ROUND
+
+#### Request:
+```javascript
+interface GotToNextRoundMessage {
+  gameId: string;
+  socketId: string;
+}
+```
+
+#### Responce:
+See: *IncomingEvents.GAME_RESPONSE*
+
+### OutgoingEvents.PAUSE_GAME
+
+#### Request:
+```javascript
+interface GotToNextRoundMessage {
+  gameId: string;
+  socketId: string;
+}
+```
+
+#### Responce:
+See: *IncomingEvents.GAME_RESPONSE*
+
+
+### OutgoingEvents.RESUME_GAME
+
+#### Request:
+```javascript
+interface GotToNextRoundMessage {
+  gameId: string;
+  socketId: string;
+}
+```
+
+#### Responce:
+See: *OutgoingEvents.GAME_RESPONSE*
+
