@@ -150,9 +150,21 @@ export class GameModel {
   }
 
   /**
-   *
+   * Find all games.
    */
   async findAll(): Promise<Game[]> {
     return this.gameModel.find().exec();
+  }
+
+  /**
+   * Find only available games for joining.
+   */
+  async findAvailableGames(): Promise<Game[]> {
+    return this.gameModel
+      .find({
+        players: { $size: 1 },
+        finished: { $nin: [false] },
+      })
+      .exec();
   }
 }
