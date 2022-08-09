@@ -3,12 +3,12 @@ import { PlayerChoice, Shapes } from '../../types/game';
 
 import { Rock } from './shapes/rock';
 import { Scissors } from './shapes/scissors';
-import { Papper } from './shapes/papper';
+import { Paper } from './shapes/paper';
 import { ShapeAbstractInterface } from './shapes/shape-abstract';
 
 const mappers = new Map<Shapes, any>([
   [Shapes.SCISSORS, Scissors],
-  [Shapes.PAPER, Papper],
+  [Shapes.PAPER, Paper],
   [Shapes.ROCK, Rock],
 ]);
 

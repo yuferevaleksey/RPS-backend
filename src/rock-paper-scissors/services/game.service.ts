@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { GameModel } from './game.model';
 import { Game } from '../schemas/game.schema';
 import { GameItem, GameRound, PlayerChoice } from '../types/game';
@@ -7,7 +7,9 @@ import { GameProcess } from './game-process/game-process.service';
 
 @Injectable()
 export class GameService {
-  readonly NO_ONE_WIN = 'noOneWin';
+  readonly TIE = 'TIE';
+
+  private readonly logger = new Logger(GameService.name);
 
   constructor(private gameModel: GameModel, private gameProcess: GameProcess) {}
 
@@ -23,11 +25,18 @@ export class GameService {
     socketId: string,
     roundsCount: number,
   ): Promise<Game> {
-    //ToDo: add checks for errors while saving here.
-    return this.gameModel.create({
-      roundsCount,
-      players: [{ socketId, nickName }],
-    });
+    try {
+      return this.gameModel.create({
+        roundsCount,
+        players: [{ socketId, nickName }],
+      });
+    } catch (e) {
+      this.logger.error(
+        `Error while saving new game data. [nick_name]=${nickName}, [socket_id]=${socketId}. ${e} `,
+      );
+    }
+
+    return;
   }
 
   /**
@@ -43,20 +52,35 @@ export class GameService {
   ): Promise<Game> {
     const gameData = await this.gameModel.findGame(gameId);
     if (!gameData) {
-      // @todo: throw error here;
+      this.logger.warn(
+        `Cannot find game data by provided [game_id]=${gameId}, [socket_id]=${socketId}`,
+      );
       return;
     }
 
     if (gameData.players.length === 2) {
-      return;
+      this.logger.warn(
+        `The game, [game_id]=${gameId}, couldn't contain more than two players. [socket_id]=${socketId}`,
+      );
+      return gameData;
     }
 
     if (gameData.players.find((player) => player.socketId === socketId)) {
-      return;
+      this.logger.warn(
+        `Player with socket ${socketId} already joined to the [game_id]=${gameId}.`,
+      );
+      return gameData;
     }
 
-    //ToDo: add checks for errors while saving here.
-    return this.gameModel.join({ gameId, player: { nickName, socketId } });
+    try {
+      return this.gameModel.join({ gameId, player: { nickName, socketId } });
+    } catch (e) {
+      this.logger.error(
+        `[game_id]=${gameId}, [socket_id]=${socketId}. Error ${e} `,
+      );
+    }
+
+    return gameData;
   }
 
   /**
@@ -72,7 +96,9 @@ export class GameService {
   ): Promise<Game> {
     const gameData = await this.gameModel.findGame(gameId);
     if (!gameData) {
-      // @todo: throw error here;
+      this.logger.warn(
+        `Cannot find game data by provided [game_id]=${gameId}, [socket_id]=${playerChoice.userSocket}`,
+      );
       return;
     }
 
@@ -98,7 +124,7 @@ export class GameService {
       winner =
         this.gameProcess
           .getShape(playerChoice)
-          ?.returnWinner(gameRound.choices[0])?.userSocket || this.NO_ONE_WIN;
+          ?.returnWinner(gameRound.choices[0])?.userSocket || this.TIE;
 
       return this.gameModel.addChoiceToRound({
         gameId,
@@ -115,16 +141,14 @@ export class GameService {
    * Get list for all games.
    */
   public async getGamesList(): Promise<GameItem[]> {
-    const gamesList = await this.gameModel.findAll();
-    return gamesList
-      .filter((game) => !game.finished && game.players.length === 1)
-      .map(
-        (game) =>
-          ({
-            id: game.id,
-            roundsCount: game.roundsCount,
-          } as GameItem),
-      );
+    const gamesList = await this.gameModel.findAvailableGames();
+    return gamesList.map(
+      (game) =>
+        ({
+          id: game.id,
+          roundsCount: game.roundsCount,
+        } as GameItem),
+    );
   }
 
   /**
@@ -135,15 +159,18 @@ export class GameService {
   public async moveToNextRound(gameId: string) {
     const gameData = await this.gameModel.findGame(gameId);
     if (!gameData) {
+      this.logger.warn(`Cannot find game data by provided [game_id]=${gameId}`);
       return;
     }
 
     if (gameData.currentRound >= gameData.roundsCount) {
+      this.logger.log(`Game has to be finished [game_id]=${gameId}`);
       return this.gameModel.finishGame(gameId);
     }
 
     const nextRoundNumber = gameData.currentRound + 1;
 
+    this.logger.warn(`Update current round for [game_id]=${gameId}`);
     return this.gameModel.moveToNextRound({ gameId, nextRoundNumber });
   }
 

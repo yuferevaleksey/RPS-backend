@@ -1,6 +1,15 @@
 # Rock Paper Scissors Backend
 
 
+## Technologies stack
+
+* NestJS  https://nestjs.com/
+* MongoDB https://www.mongodb.com/
+
+## Extra libraries
+* Mongoose https://mongoosejs.com/
+* Socket-io https://socket.io/
+
 ## Installation
 
 Clone repo:

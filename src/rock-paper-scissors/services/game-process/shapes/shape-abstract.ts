@@ -1,21 +1,21 @@
 import { PlayerChoice, Shapes } from '../../../types/game';
 
 export interface ShapeAbstractInterface {
-  achillesHeel: Shapes;
+  weakness: Shapes;
   payerChoice: PlayerChoice;
-  returnWinner: (rivalChoice: PlayerChoice) => PlayerChoice;
+  returnWinner: (opponentChoice: PlayerChoice) => PlayerChoice;
 }
 
 export abstract class ShapeAbstract implements ShapeAbstractInterface {
-  abstract achillesHeel: Shapes;
+  abstract weakness: Shapes;
   abstract payerChoice: PlayerChoice;
 
-  returnWinner(rivalChoice: PlayerChoice): PlayerChoice {
-    if (rivalChoice.choice === this.achillesHeel) {
-      return rivalChoice;
+  returnWinner(opponentChoice: PlayerChoice): PlayerChoice {
+    if (opponentChoice.choice === this.weakness) {
+      return opponentChoice;
     }
 
-    if (rivalChoice.choice === this.payerChoice.choice) {
+    if (opponentChoice.choice === this.payerChoice.choice) {
       return;
     }
 
