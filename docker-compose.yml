@@ -1,0 +1,21 @@
+version: '3.4'
+
+services:
+  web:
+    image: backend-app
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: production
+      MONGODB_CONNECTION_STRING: mongodb://db:27017/game
+      # PORT: 3333
+    ports:
+      - 3001:3001
+    # command: nx serve backend
+  db:
+    image: mongo:latest
+    environment:
+      - MONGODB_DATABASE="game"
+    ports:
+      - 27017:27017
